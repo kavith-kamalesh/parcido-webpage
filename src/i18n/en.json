@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "Antigravity",
+    "tagline": "Move anything, anywhere"
+  },
+  "nav": {
+    "home": "Home",
+    "book": "Book",
+    "track": "Track",
+    "history": "History",
+    "profile": "Profile",
+    "dashboard": "Dashboard",
+    "earnings": "Earnings",
+    "vehicles": "Vehicles"
+  },
+  "hero": {
+    "title": "Logistics that defies limits",
+    "subtitle": "Connect with verified drivers for seamless transport — from fragile goods to full truckloads. Smart matching, real-time tracking, optimized loading.",
+    "cta_customer": "Ship Something",
+    "cta_driver": "Drive With Us"
+  },
+  "features": {
+    "smart_matching": "Smart Matching",
+    "smart_matching_desc": "AI-powered driver matching based on capacity, proximity, and cargo type",
+    "live_tracking": "Live Tracking",
+    "live_tracking_desc": "Real-time GPS tracking with ETA updates every 60 seconds",
+    "load_optimizer": "Load Optimizer",
+    "load_optimizer_desc": "3D bin-packing algorithm ensures optimal space utilization",
+    "shared_transport": "Shared Transport",
+    "shared_transport_desc": "Share vehicle space with others on the same route — save costs",
+    "verified_drivers": "Verified Drivers",
+    "verified_drivers_desc": "Every driver document-verified with background checks",
+    "secure_payments": "Secure Payments",
+    "secure_payments_desc": "GST-compliant invoicing with transparent price breakdowns"
+  },
+  "booking": {
+    "title": "New Booking",
+    "product_name": "Product Name",
+    "description": "Description",
+    "category": "Category",
+    "fragile": "Fragile",
+    "medical": "Medical",
+    "general": "General",
+    "restricted": "Restricted",
+    "dimensions": "Dimensions",
+    "mode_3d": "3D (L×W×H)",
+    "mode_area": "Area (L×W)",
+    "mode_liquid": "Volume (Litres)",
+    "length": "Length",
+    "width": "Width",
+    "height": "Height",
+    "thickness": "Thickness",
+    "litres": "Litres",
+    "weight": "Weight",
+    "stackable": "Stackable",
+    "orientation_sensitive": "Keep Upright",
+    "space_required": "Space Required",
+    "add_item": "Add Item",
+    "find_drivers": "Find Drivers",
+    "pickup": "Pickup Address",
+    "delivery": "Delivery Address",
+    "preferred_date": "Preferred Date",
+    "instructions": "Special Instructions",
+    "unit": "Unit"
+  },
+  "driver": {
+    "dashboard": "Driver Dashboard",
+    "capacity": "Vehicle Capacity",
+    "used": "Used",
+    "available": "Available",
+    "incoming_requests": "Incoming Requests",
+    "accept": "Accept",
+    "decline": "Decline",
+    "current_load": "Current Load",
+    "earnings": "Earnings",
+    "today": "Today",
+    "week": "This Week",
+    "month": "This Month"
+  },
+  "auth": {
+    "login": "Log In",
+    "register": "Create Account",
+    "phone": "Phone Number",
+    "email": "Email",
+    "password": "Password",
+    "send_otp": "Send OTP",
+    "verify_otp": "Verify OTP",
+    "role_select": "I am a",
+    "customer": "Customer",
+    "driver_role": "Driver",
+    "welcome_back": "Welcome back",
+    "get_started": "Get started with Antigravity"
+  },
+  "common": {
+    "en": "EN",
+    "ta": "தமிழ்",
+    "kg": "kg",
+    "lbs": "lbs",
+    "cm": "cm",
+    "m": "m",
+    "ft": "ft"
+  }
+}
