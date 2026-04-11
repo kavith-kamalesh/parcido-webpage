@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          categories: string[]
+          created_at: string
+          customer_id: string
+          delivery_address: string
+          driver_id: string | null
+          id: string
+          items: Json
+          pickup_address: string
+          pickup_date: string
+          price: number | null
+          special_instructions: string | null
+          status: string
+          total_volume_m3: number
+          total_weight_kg: number
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          categories?: string[]
+          created_at?: string
+          customer_id: string
+          delivery_address: string
+          driver_id?: string | null
+          id?: string
+          items?: Json
+          pickup_address: string
+          pickup_date: string
+          price?: number | null
+          special_instructions?: string | null
+          status?: string
+          total_volume_m3?: number
+          total_weight_kg?: number
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          categories?: string[]
+          created_at?: string
+          customer_id?: string
+          delivery_address?: string
+          driver_id?: string | null
+          id?: string
+          items?: Json
+          pickup_address?: string
+          pickup_date?: string
+          price?: number | null
+          special_instructions?: string | null
+          status?: string
+          total_volume_m3?: number
+          total_weight_kg?: number
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -44,12 +109,65 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicles: {
+        Row: {
+          allowed_categories: string[]
+          capacity_m3: number
+          created_at: string
+          driver_id: string
+          id: string
+          is_active: boolean
+          max_weight_kg: number
+          plate_number: string
+          updated_at: string
+          vehicle_type: string
+        }
+        Insert: {
+          allowed_categories?: string[]
+          capacity_m3?: number
+          created_at?: string
+          driver_id: string
+          id?: string
+          is_active?: boolean
+          max_weight_kg?: number
+          plate_number: string
+          updated_at?: string
+          vehicle_type?: string
+        }
+        Update: {
+          allowed_categories?: string[]
+          capacity_m3?: number
+          created_at?: string
+          driver_id?: string
+          id?: string
+          is_active?: boolean
+          max_weight_kg?: number
+          plate_number?: string
+          updated_at?: string
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      find_matching_vehicles: {
+        Args: { p_categories: string[]; p_volume: number; p_weight: number }
+        Returns: {
+          allowed_categories: string[]
+          available_space: number
+          capacity_m3: number
+          driver_avatar: string
+          driver_id: string
+          driver_name: string
+          max_weight_kg: number
+          plate_number: string
+          vehicle_id: string
+          vehicle_type: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

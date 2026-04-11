@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Package, Plus, Trash2, ArrowRight, MapPin, Calendar,
-  Box, Droplets, Grid3X3, ToggleLeft, AlertTriangle
+  Box, Droplets, Grid3X3, X, Truck as TruckIcon, Star, Loader2, CheckCircle2
 } from 'lucide-react';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Link } from 'react-router-dom';
 import { Truck } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 type DimensionMode = '3d' | 'area' | 'liquid';
 type LengthUnit = 'cm' | 'm' | 'ft';
@@ -32,6 +35,19 @@ interface BookingItem {
   orientationSensitive: boolean;
 }
 
+interface MatchedVehicle {
+  vehicle_id: string;
+  driver_id: string;
+  vehicle_type: string;
+  plate_number: string;
+  capacity_m3: number;
+  max_weight_kg: number;
+  allowed_categories: string[];
+  driver_name: string | null;
+  driver_avatar: string | null;
+  available_space: number;
+}
+
 const createBlankItem = (): BookingItem => ({
   id: crypto.randomUUID(),
   name: '',
@@ -53,6 +69,11 @@ const createBlankItem = (): BookingItem => ({
 const toMetres = (val: number, unit: LengthUnit) => {
   if (unit === 'cm') return val * 0.01;
   if (unit === 'ft') return val * 0.3048;
+  return val;
+};
+
+const toKg = (val: number, unit: WeightUnit) => {
+  if (unit === 'lbs') return val * 0.453592;
   return val;
 };
 
@@ -80,7 +101,17 @@ const categoryColors: Record<Category, string> = {
 
 const BookingPage = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [items, setItems] = useState<BookingItem[]>([createBlankItem()]);
+  const [pickup, setPickup] = useState('');
+  const [delivery, setDelivery] = useState('');
+  const [pickupDate, setPickupDate] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [showResults, setShowResults] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [matchedVehicles, setMatchedVehicles] = useState<MatchedVehicle[]>([]);
+  const [booking, setBooking] = useState(false);
 
   const updateItem = (id: string, updates: Partial<BookingItem>) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...updates } : it)));
@@ -91,6 +122,79 @@ const BookingPage = () => {
   };
 
   const totalVolume = useMemo(() => items.reduce((sum, it) => sum + calcVolume(it), 0), [items]);
+  const totalWeight = useMemo(() => items.reduce((sum, it) => sum + toKg(parseFloat(it.weight) || 0, it.weightUnit), 0), [items]);
+  const uniqueCategories = useMemo(() => [...new Set(items.map((it) => it.category))], [items]);
+
+  const handleFindDrivers = async () => {
+    if (!pickup || !delivery || !pickupDate) {
+      toast({ title: 'Missing details', description: 'Please fill in pickup, delivery address and date.', variant: 'destructive' });
+      return;
+    }
+    if (totalVolume <= 0) {
+      toast({ title: 'No items', description: 'Please add item dimensions to calculate volume.', variant: 'destructive' });
+      return;
+    }
+
+    setSearching(true);
+    setShowResults(true);
+
+    const { data, error } = await supabase.rpc('find_matching_vehicles', {
+      p_volume: totalVolume,
+      p_weight: totalWeight,
+      p_categories: uniqueCategories,
+    });
+
+    if (error) {
+      console.error('Matching error:', error);
+      setMatchedVehicles([]);
+    } else {
+      setMatchedVehicles((data as MatchedVehicle[]) || []);
+    }
+    setSearching(false);
+  };
+
+  const handleSelectDriver = async (vehicle: MatchedVehicle) => {
+    if (!user) {
+      toast({ title: 'Not logged in', description: 'Please log in to book.', variant: 'destructive' });
+      return;
+    }
+    setBooking(true);
+
+    const { error } = await supabase.from('bookings').insert({
+      customer_id: user.id,
+      driver_id: vehicle.driver_id,
+      vehicle_id: vehicle.vehicle_id,
+      pickup_address: pickup,
+      delivery_address: delivery,
+      pickup_date: pickupDate,
+      items: items.map((it) => ({
+        name: it.name,
+        category: it.category,
+        volume_m3: calcVolume(it),
+        weight_kg: toKg(parseFloat(it.weight) || 0, it.weightUnit),
+        stackable: it.stackable,
+        orientationSensitive: it.orientationSensitive,
+      })),
+      total_volume_m3: totalVolume,
+      total_weight_kg: totalWeight,
+      categories: uniqueCategories,
+      special_instructions: instructions || null,
+      status: 'matched',
+    });
+
+    setBooking(false);
+    if (error) {
+      toast({ title: 'Booking failed', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Booking confirmed!', description: `Your shipment is matched with ${vehicle.driver_name || 'a driver'}.` });
+      setShowResults(false);
+      setItems([createBlankItem()]);
+      setPickup('');
+      setDelivery('');
+      setPickupDate('');
+      setInstructions('');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,6 +219,8 @@ const BookingPage = () => {
               <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-status-active" />
               <input
                 placeholder={t('booking.pickup')}
+                value={pickup}
+                onChange={(e) => setPickup(e.target.value)}
                 className="w-full rounded-xl border border-input bg-card py-3 pl-10 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -122,6 +228,8 @@ const BookingPage = () => {
               <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-destructive" />
               <input
                 placeholder={t('booking.delivery')}
+                value={delivery}
+                onChange={(e) => setDelivery(e.target.value)}
                 className="w-full rounded-xl border border-input bg-card py-3 pl-10 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -129,6 +237,8 @@ const BookingPage = () => {
               <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
               <input
                 type="date"
+                value={pickupDate}
+                onChange={(e) => setPickupDate(e.target.value)}
                 className="w-full rounded-xl border border-input bg-card py-3 pl-10 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -261,7 +371,7 @@ const BookingPage = () => {
 
                 {/* Volume display */}
                 {calcVolume(item) > 0 && (
-                  <div className="rounded-lg bg-primary-light px-3 py-2 text-sm font-medium text-primary">
+                  <div className="rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
                     {t('booking.space_required')}: {calcVolume(item).toFixed(3)} m³ ({(calcVolume(item) * 35.3147).toFixed(1)} ft³)
                   </div>
                 )}
@@ -321,6 +431,8 @@ const BookingPage = () => {
           {/* Special instructions */}
           <textarea
             placeholder={t('booking.instructions')}
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
             rows={2}
             className="mb-6 w-full rounded-xl border border-input bg-card py-3 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
@@ -328,18 +440,142 @@ const BookingPage = () => {
       </div>
 
       {/* Fixed bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/80 backdrop-blur-md">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/80 backdrop-blur-md z-40">
         <div className="container max-w-2xl flex items-center justify-between py-4">
           <div>
             <div className="text-xs text-muted-foreground">{t('booking.space_required')}</div>
             <div className="text-lg font-bold text-foreground">{totalVolume.toFixed(3)} m³</div>
           </div>
-          <button className="inline-flex items-center gap-2 rounded-xl gradient-amber px-6 py-3 font-semibold text-primary-foreground shadow-amber transition-transform hover:scale-[1.02]">
+          <button
+            onClick={handleFindDrivers}
+            disabled={searching}
+            className="inline-flex items-center gap-2 rounded-xl gradient-amber px-6 py-3 font-semibold text-primary-foreground shadow-amber transition-transform hover:scale-[1.02] disabled:opacity-50"
+          >
+            {searching ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
             {t('booking.find_drivers')}
-            <ArrowRight className="h-5 w-5" />
           </button>
         </div>
       </div>
+
+      {/* Driver results overlay */}
+      <AnimatePresence>
+        {showResults && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowResults(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-2xl max-h-[75vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card p-6"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-foreground">Available Drivers</h2>
+                <button onClick={() => setShowResults(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Summary */}
+              <div className="mb-4 flex gap-3 text-xs">
+                <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
+                  {totalVolume.toFixed(3)} m³
+                </span>
+                <span className="rounded-full bg-muted px-3 py-1 font-medium text-muted-foreground">
+                  {totalWeight.toFixed(1)} kg
+                </span>
+                {uniqueCategories.map((cat) => (
+                  <span key={cat} className={`rounded-full border px-3 py-1 font-medium ${categoryColors[cat as Category]}`}>
+                    {cat}
+                  </span>
+                ))}
+              </div>
+
+              {searching ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                  <p className="text-sm text-muted-foreground">Searching for drivers...</p>
+                </div>
+              ) : matchedVehicles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <TruckIcon className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-medium text-foreground">No drivers available</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No vehicles currently match your volume, weight, and category requirements.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {matchedVehicles.map((v) => (
+                    <motion.div
+                      key={v.vehicle_id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-xl border border-border bg-background p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                          {v.driver_avatar ? (
+                            <img src={v.driver_avatar} alt="" className="h-11 w-11 rounded-full object-cover" />
+                          ) : (
+                            <TruckIcon className="h-5 w-5 text-primary" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-foreground truncate">
+                              {v.driver_name || 'Driver'}
+                            </h3>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+                              4.8
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground capitalize">{v.vehicle_type} · {v.plate_number}</p>
+                          <div className="mt-2 flex gap-2 text-xs">
+                            <span className="rounded bg-muted px-2 py-0.5">
+                              {Number(v.available_space).toFixed(1)} m³ free
+                            </span>
+                            <span className="rounded bg-muted px-2 py-0.5">
+                              {Number(v.max_weight_kg).toFixed(0)} kg max
+                            </span>
+                          </div>
+                          {/* Capacity bar */}
+                          <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all"
+                              style={{
+                                width: `${Math.min(100, (totalVolume / Number(v.capacity_m3)) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            Your cargo fills {((totalVolume / Number(v.capacity_m3)) * 100).toFixed(0)}% of this vehicle
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleSelectDriver(v)}
+                        disabled={booking}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg gradient-amber py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.01] disabled:opacity-50"
+                      >
+                        {booking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        Book this driver
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
