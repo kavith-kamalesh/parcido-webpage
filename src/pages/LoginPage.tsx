@@ -1,25 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Truck, Mail } from 'lucide-react';
+import { Truck } from 'lucide-react';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { lovable } from '@/integrations/lovable';
+import { useAuth, getUserRole } from '@/hooks/useAuth';
 
 const LoginPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      getUserRole(user.id).then((role) => {
+        navigate(role === 'driver' ? '/driver' : '/booking');
+      });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
     try {
-      const result = await lovable.auth.signInWithOAuth('google');
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: window.location.origin,
+      });
       if (result.error) {
         setError(result.error.message || 'Login failed');
       }
+      if (result.redirected) return;
     } catch (e) {
       setError('Something went wrong');
     } finally {
@@ -29,13 +42,8 @@ const LoginPage = () => {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left visual */}
       <div className="hidden lg:flex lg:w-1/2 gradient-amber items-center justify-center p-12">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary-foreground/20">
             <Truck className="h-10 w-10 text-primary-foreground" />
           </div>
@@ -44,7 +52,6 @@ const LoginPage = () => {
         </motion.div>
       </div>
 
-      {/* Right form */}
       <div className="flex flex-1 flex-col">
         <div className="flex items-center justify-between p-6">
           <Link to="/" className="flex items-center gap-2 text-foreground">
@@ -55,20 +62,14 @@ const LoginPage = () => {
         </div>
 
         <div className="flex flex-1 items-center justify-center px-6 pb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-sm space-y-6"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm space-y-6">
             <div>
               <h1 className="text-2xl font-bold text-foreground">{t('auth.welcome_back')}</h1>
               <p className="mt-1 text-muted-foreground">{t('auth.login')}</p>
             </div>
 
             {error && (
-              <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {error}
-              </div>
+              <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>
             )}
 
             <button
@@ -87,9 +88,7 @@ const LoginPage = () => {
 
             <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{' '}
-              <Link to="/register" className="font-medium text-primary hover:underline">
-                {t('auth.register')}
-              </Link>
+              <Link to="/register" className="font-medium text-primary hover:underline">{t('auth.register')}</Link>
             </p>
           </motion.div>
         </div>
