@@ -107,13 +107,15 @@ const DriverDashboard = () => {
       return;
     }
     setSavingVehicle(true);
+    const capacity = parseFloat(vForm.capacity_m3);
     const { error } = await supabase.from('vehicles').insert({
       driver_id: user.id,
       vehicle_type: vForm.vehicle_type,
       plate_number: vForm.plate_number,
-      capacity_m3: parseFloat(vForm.capacity_m3),
+      capacity_m3: capacity,
       max_weight_kg: parseFloat(vForm.max_weight_kg),
       allowed_categories: vForm.allowed_categories,
+      available_capacity_m3: capacity,
     });
 
     setSavingVehicle(false);
