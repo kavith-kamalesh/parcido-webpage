@@ -6,6 +6,7 @@ import {
   Truck, Package, TrendingUp, CheckCircle2, XCircle,
   MapPin, Clock, Star, BarChart3, Plus, X, LogOut, Loader2
 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
