@@ -454,6 +454,24 @@ const DriverDashboard = () => {
                           {v.is_active ? 'Active' : 'Inactive'}
                         </button>
                       </div>
+                      {/* Availability slider */}
+                      <div className="mt-3 border-t border-border pt-3">
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <label className="text-xs font-medium text-muted-foreground">Available for booking</label>
+                          <span className="text-xs font-semibold text-foreground">
+                            {Number(v.available_capacity_m3).toFixed(1)} / {Number(v.capacity_m3).toFixed(1)} m³
+                          </span>
+                        </div>
+                        <Slider
+                          value={[Number(v.available_capacity_m3)]}
+                          min={0}
+                          max={Number(v.capacity_m3)}
+                          step={0.1}
+                          onValueChange={([val]) => handleAvailabilityChange(v.id, val)}
+                          onValueCommit={([val]) => commitAvailability(v.id, val)}
+                          className="w-full"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
