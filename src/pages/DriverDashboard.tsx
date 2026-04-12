@@ -134,6 +134,26 @@ const DriverDashboard = () => {
     fetchData();
   };
 
+  const handleAvailabilityChange = async (vehicleId: string, value: number) => {
+    // Optimistic update
+    setVehicles((prev) =>
+      prev.map((v) => (v.id === vehicleId ? { ...v, available_capacity_m3: value } : v))
+    );
+  };
+
+  const commitAvailability = async (vehicleId: string, value: number) => {
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ available_capacity_m3: value })
+      .eq('id', vehicleId);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      fetchData();
+    } else {
+      toast({ title: 'Updated', description: 'Available capacity updated.' });
+    }
+  };
+
   const totalCapacity = vehicles.reduce((s, v) => s + Number(v.capacity_m3), 0);
   const usedCapacity = activeBookings.reduce((s, b) => s + Number(b.total_volume_m3), 0);
   const usedPercent = totalCapacity > 0 ? (usedCapacity / totalCapacity) * 100 : 0;
