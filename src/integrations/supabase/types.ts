@@ -112,6 +112,7 @@ export type Database = {
       vehicles: {
         Row: {
           allowed_categories: string[]
+          available_capacity_m3: number
           capacity_m3: number
           created_at: string
           driver_id: string
@@ -124,6 +125,7 @@ export type Database = {
         }
         Insert: {
           allowed_categories?: string[]
+          available_capacity_m3?: number
           capacity_m3?: number
           created_at?: string
           driver_id: string
@@ -136,6 +138,7 @@ export type Database = {
         }
         Update: {
           allowed_categories?: string[]
+          available_capacity_m3?: number
           capacity_m3?: number
           created_at?: string
           driver_id?: string

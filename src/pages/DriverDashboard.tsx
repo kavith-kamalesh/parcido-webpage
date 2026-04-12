@@ -6,6 +6,7 @@ import {
   Truck, Package, TrendingUp, CheckCircle2, XCircle,
   MapPin, Clock, Star, BarChart3, Plus, X, LogOut, Loader2
 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -106,13 +107,15 @@ const DriverDashboard = () => {
       return;
     }
     setSavingVehicle(true);
+    const capacity = parseFloat(vForm.capacity_m3);
     const { error } = await supabase.from('vehicles').insert({
       driver_id: user.id,
       vehicle_type: vForm.vehicle_type,
       plate_number: vForm.plate_number,
-      capacity_m3: parseFloat(vForm.capacity_m3),
+      capacity_m3: capacity,
       max_weight_kg: parseFloat(vForm.max_weight_kg),
       allowed_categories: vForm.allowed_categories,
+      available_capacity_m3: capacity,
     });
 
     setSavingVehicle(false);
@@ -129,6 +132,26 @@ const DriverDashboard = () => {
   const toggleVehicleActive = async (v: Vehicle) => {
     await supabase.from('vehicles').update({ is_active: !v.is_active }).eq('id', v.id);
     fetchData();
+  };
+
+  const handleAvailabilityChange = async (vehicleId: string, value: number) => {
+    // Optimistic update
+    setVehicles((prev) =>
+      prev.map((v) => (v.id === vehicleId ? { ...v, available_capacity_m3: value } : v))
+    );
+  };
+
+  const commitAvailability = async (vehicleId: string, value: number) => {
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ available_capacity_m3: value })
+      .eq('id', vehicleId);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      fetchData();
+    } else {
+      toast({ title: 'Updated', description: 'Available capacity updated.' });
+    }
   };
 
   const totalCapacity = vehicles.reduce((s, v) => s + Number(v.capacity_m3), 0);
@@ -430,6 +453,24 @@ const DriverDashboard = () => {
                         >
                           {v.is_active ? 'Active' : 'Inactive'}
                         </button>
+                      </div>
+                      {/* Availability slider */}
+                      <div className="mt-3 border-t border-border pt-3">
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <label className="text-xs font-medium text-muted-foreground">Available for booking</label>
+                          <span className="text-xs font-semibold text-foreground">
+                            {Number(v.available_capacity_m3).toFixed(1)} / {Number(v.capacity_m3).toFixed(1)} m³
+                          </span>
+                        </div>
+                        <Slider
+                          value={[Number(v.available_capacity_m3)]}
+                          min={0}
+                          max={Number(v.capacity_m3)}
+                          step={0.1}
+                          onValueChange={([val]) => handleAvailabilityChange(v.id, val)}
+                          onValueCommit={([val]) => commitAvailability(v.id, val)}
+                          className="w-full"
+                        />
                       </div>
                     </div>
                   ))}
