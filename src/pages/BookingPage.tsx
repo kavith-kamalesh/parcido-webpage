@@ -163,7 +163,7 @@ const BookingPage = () => {
     }
     setBooking(true);
 
-    const { error } = await supabase.from('bookings').insert({
+    const { data, error } = await supabase.from('bookings').insert({
       customer_id: user.id,
       driver_id: vehicle.driver_id,
       vehicle_id: vehicle.vehicle_id,
@@ -183,7 +183,7 @@ const BookingPage = () => {
       categories: uniqueCategories,
       special_instructions: instructions || null,
       status: 'matched',
-    });
+    }).select();
 
     setBooking(false);
     if (error) {
