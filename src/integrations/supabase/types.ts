@@ -19,8 +19,10 @@ export type Database = {
           categories: string[]
           created_at: string
           customer_id: string
+          customer_photo_url: string | null
           delivery_address: string
           driver_id: string | null
+          driver_photo_url: string | null
           id: string
           items: Json
           pickup_address: string
@@ -37,8 +39,10 @@ export type Database = {
           categories?: string[]
           created_at?: string
           customer_id: string
+          customer_photo_url?: string | null
           delivery_address: string
           driver_id?: string | null
+          driver_photo_url?: string | null
           id?: string
           items?: Json
           pickup_address: string
@@ -55,8 +59,10 @@ export type Database = {
           categories?: string[]
           created_at?: string
           customer_id?: string
+          customer_photo_url?: string | null
           delivery_address?: string
           driver_id?: string | null
+          driver_photo_url?: string | null
           id?: string
           items?: Json
           pickup_address?: string
