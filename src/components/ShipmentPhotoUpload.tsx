@@ -60,10 +60,12 @@ export const ShipmentPhotoUpload = ({
 
     const url = publicUrlData.publicUrl;
 
-    const column = type === 'customer' ? 'customer_photo_url' : 'driver_photo_url';
+    const updatePayload = type === 'customer'
+      ? { customer_photo_url: url }
+      : { driver_photo_url: url };
     const { error: updateError } = await supabase
       .from('bookings')
-      .update({ [column]: url })
+      .update(updatePayload)
       .eq('id', bookingId);
 
     setUploading(false);
@@ -80,8 +82,10 @@ export const ShipmentPhotoUpload = ({
   };
 
   const removePhoto = async () => {
-    const column = type === 'customer' ? 'customer_photo_url' : 'driver_photo_url';
-    await supabase.from('bookings').update({ [column]: null }).eq('id', bookingId);
+    const clearPayload = type === 'customer'
+      ? { customer_photo_url: null as string | null }
+      : { driver_photo_url: null as string | null };
+    await supabase.from('bookings').update(clearPayload).eq('id', bookingId);
     setPreviewUrl(null);
     onUploaded('');
     toast({ title: 'Photo removed' });
