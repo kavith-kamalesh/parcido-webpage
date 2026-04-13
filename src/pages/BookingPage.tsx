@@ -438,6 +438,42 @@ const BookingPage = () => {
             rows={2}
             className="mb-6 w-full rounded-xl border border-input bg-card py-3 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
+
+          {/* Confirmed booking — photo upload */}
+          {confirmedBookingId && user && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 rounded-xl border border-status-active/30 bg-status-active/5 p-5"
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-status-active" />
+                <h3 className="text-sm font-semibold text-foreground">Booking Confirmed with {confirmedDriverName}</h3>
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Upload a photo of your items before shipping for verification.
+              </p>
+              <ShipmentPhotoUpload
+                bookingId={confirmedBookingId}
+                userId={user.id}
+                type="customer"
+                onUploaded={() => {}}
+              />
+              <button
+                onClick={() => {
+                  setConfirmedBookingId(null);
+                  setItems([createBlankItem()]);
+                  setPickup('');
+                  setDelivery('');
+                  setPickupDate('');
+                  setInstructions('');
+                }}
+                className="mt-4 text-xs font-medium text-primary hover:underline"
+              >
+                Create another booking
+              </button>
+            </motion.div>
+          )}
         </motion.div>
       </div>
 
