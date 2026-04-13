@@ -11,6 +11,7 @@ import { Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { ShipmentPhotoUpload } from '@/components/ShipmentPhotoUpload';
 
 type DimensionMode = '3d' | 'area' | 'liquid';
 type LengthUnit = 'cm' | 'm' | 'ft';
