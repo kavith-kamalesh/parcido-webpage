@@ -113,6 +113,8 @@ const BookingPage = () => {
   const [searching, setSearching] = useState(false);
   const [matchedVehicles, setMatchedVehicles] = useState<MatchedVehicle[]>([]);
   const [booking, setBooking] = useState(false);
+  const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
+  const [confirmedDriverName, setConfirmedDriverName] = useState<string>('');
 
   const updateItem = (id: string, updates: Partial<BookingItem>) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...updates } : it)));
@@ -189,11 +191,10 @@ const BookingPage = () => {
     } else {
       toast({ title: 'Booking confirmed!', description: `Your shipment is matched with ${vehicle.driver_name || 'a driver'}.` });
       setShowResults(false);
-      setItems([createBlankItem()]);
-      setPickup('');
-      setDelivery('');
-      setPickupDate('');
-      setInstructions('');
+      if (data && data.length > 0) {
+        setConfirmedBookingId(data[0].id);
+      }
+      setConfirmedDriverName(vehicle.driver_name || 'a driver');
     }
   };
 
