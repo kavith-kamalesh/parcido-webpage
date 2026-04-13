@@ -315,6 +315,25 @@ const DriverDashboard = () => {
                             {b.status}
                           </span>
                         </div>
+                        {/* Customer's before-shipping photo */}
+                        {b.customer_photo_url && (
+                          <div className="mt-3 border-t border-border pt-3">
+                            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Customer's Before Photo</label>
+                            <img src={b.customer_photo_url} alt="Before shipping" className="h-24 w-24 rounded-lg border border-border object-cover" />
+                          </div>
+                        )}
+                        {/* Driver's after-delivery photo upload */}
+                        {user && (
+                          <div className="border-t border-border pt-1 mt-3">
+                            <ShipmentPhotoUpload
+                              bookingId={b.id}
+                              userId={user.id}
+                              existingUrl={b.driver_photo_url}
+                              type="driver"
+                              onUploaded={() => fetchData()}
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
