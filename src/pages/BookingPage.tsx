@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -141,7 +141,7 @@ const BookingPage = () => {
     setSearching(true);
     setShowResults(true);
 
-    const { data, error } = await supabase.rpc('find_matching_vehicles', {
+    const { data, error } = await (supabase as any).rpc('find_matching_vehicles', {
       p_volume: totalVolume,
       p_weight: totalWeight,
       p_categories: uniqueCategories,
@@ -151,7 +151,7 @@ const BookingPage = () => {
       console.error('Matching error:', error);
       setMatchedVehicles([]);
     } else {
-      setMatchedVehicles((data as MatchedVehicle[]) || []);
+      setMatchedVehicles(((data as unknown) as MatchedVehicle[]) || []);
     }
     setSearching(false);
   };
@@ -163,24 +163,19 @@ const BookingPage = () => {
     }
     setBooking(true);
 
-    const { data, error } = await supabase.from('bookings').insert({
+    const goodsDesc = items.map((it) => `${it.name} (${it.category})`).join(' | ');
+    const { data, error } = await (supabase as any).from('bookings').insert({
       customer_id: user.id,
       driver_id: vehicle.driver_id,
-      vehicle_id: vehicle.vehicle_id,
       pickup_address: pickup,
       delivery_address: delivery,
-      pickup_date: pickupDate,
-      items: items.map((it) => ({
-        name: it.name,
-        category: it.category,
-        volume_m3: calcVolume(it),
-        weight_kg: toKg(parseFloat(it.weight) || 0, it.weightUnit),
-        stackable: it.stackable,
-        orientationSensitive: it.orientationSensitive,
-      })),
+      pickup_latitude: 0,
+      pickup_longitude: 0,
+      delivery_latitude: 0,
+      delivery_longitude: 0,
       total_volume_m3: totalVolume,
       total_weight_kg: totalWeight,
-      categories: uniqueCategories,
+      goods_description: goodsDesc,
       special_instructions: instructions || null,
       status: 'matched',
     }).select();
@@ -205,7 +200,7 @@ const BookingPage = () => {
         <div className="container flex h-14 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-foreground">
             <Truck className="h-5 w-5" />
-            <span className="font-bold">Antigravity</span>
+            <span className="font-bold">parcido</span>
           </Link>
           <LanguageToggle />
         </div>

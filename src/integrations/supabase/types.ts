@@ -16,144 +16,253 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
-          categories: string[]
-          created_at: string
-          customer_id: string
-          customer_photo_url: string | null
-          delivery_address: string
-          driver_id: string | null
-          driver_photo_url: string | null
           id: string
-          items: Json
+          customer_id: string
+          driver_id: string | null
           pickup_address: string
-          pickup_date: string
-          price: number | null
+          delivery_address: string
+          pickup_latitude: number
+          pickup_longitude: number
+          delivery_latitude: number
+          delivery_longitude: number
+          total_volume_m3: number | null
+          total_weight_kg: number | null
+          goods_description: string | null
           special_instructions: string | null
           status: string
-          total_volume_m3: number
-          total_weight_kg: number
+          estimated_price: number | null
+          final_price: number | null
+          scheduled_pickup: string | null
+          actual_pickup: string | null
+          actual_delivery: string | null
+          created_at: string
           updated_at: string
-          vehicle_id: string | null
         }
         Insert: {
-          categories?: string[]
-          created_at?: string
-          customer_id: string
-          customer_photo_url?: string | null
-          delivery_address: string
-          driver_id?: string | null
-          driver_photo_url?: string | null
           id?: string
-          items?: Json
+          customer_id: string
+          driver_id?: string | null
           pickup_address: string
-          pickup_date: string
-          price?: number | null
+          delivery_address: string
+          pickup_latitude: number
+          pickup_longitude: number
+          delivery_latitude: number
+          delivery_longitude: number
+          total_volume_m3?: number | null
+          total_weight_kg?: number | null
+          goods_description?: string | null
           special_instructions?: string | null
           status?: string
-          total_volume_m3?: number
-          total_weight_kg?: number
+          estimated_price?: number | null
+          final_price?: number | null
+          scheduled_pickup?: string | null
+          actual_pickup?: string | null
+          actual_delivery?: string | null
+          created_at?: string
           updated_at?: string
-          vehicle_id?: string | null
         }
         Update: {
-          categories?: string[]
-          created_at?: string
-          customer_id?: string
-          customer_photo_url?: string | null
-          delivery_address?: string
-          driver_id?: string | null
-          driver_photo_url?: string | null
           id?: string
-          items?: Json
+          customer_id?: string
+          driver_id?: string | null
           pickup_address?: string
-          pickup_date?: string
-          price?: number | null
+          delivery_address?: string
+          pickup_latitude?: number
+          pickup_longitude?: number
+          delivery_latitude?: number
+          delivery_longitude?: number
+          total_volume_m3?: number | null
+          total_weight_kg?: number | null
+          goods_description?: string | null
           special_instructions?: string | null
           status?: string
-          total_volume_m3?: number
-          total_weight_kg?: number
+          estimated_price?: number | null
+          final_price?: number | null
+          scheduled_pickup?: string | null
+          actual_pickup?: string | null
+          actual_delivery?: string | null
+          created_at?: string
           updated_at?: string
-          vehicle_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "bookings_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      driver_documents: {
+        Row: {
+          document_type: string
+          driver_id: string
+          expiry_date: string | null
+          file_url: string
+          id: string
+          updated_at: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          document_type: string
+          driver_id: string
+          expiry_date?: string | null
+          file_url: string
+          id?: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          document_type?: string
+          driver_id?: string
+          expiry_date?: string | null
+          file_url?: string
+          id?: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: []
+      }
+      profile_details: {
+        Row: {
+          id: string
+          user_id: string
+          phone: string | null
+          experience_years: number | null
+          languages: string[] | null
+          is_verified: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          phone?: string | null
+          experience_years?: number | null
+          languages?: string[] | null
+          is_verified?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          phone?: string | null
+          experience_years?: number | null
+          languages?: string[] | null
+          is_verified?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
           avatar_url: string | null
-          created_at: string
+          created_at: string | null
           display_name: string | null
           id: string
-          role: string
-          updated_at: string
-          user_id: string
+          is_activated: boolean | null
+          role: string | null
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           avatar_url?: string | null
-          created_at?: string
+          created_at?: string | null
           display_name?: string | null
-          id?: string
-          role?: string
-          updated_at?: string
-          user_id: string
+          id: string
+          is_activated?: boolean | null
+          role?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           avatar_url?: string | null
-          created_at?: string
+          created_at?: string | null
           display_name?: string | null
           id?: string
-          role?: string
+          is_activated?: boolean | null
+          role?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      saved_addresses: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          address: string
+          latitude: number
+          longitude: number
+          is_default: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          address: string
+          latitude: number
+          longitude: number
+          is_default?: boolean | null
+          created_at?: string
           updated_at?: string
+        }
+        Update: {
+          id?: string
           user_id?: string
+          name?: string
+          address?: string
+          latitude?: number
+          longitude?: number
+          is_default?: boolean | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
       vehicles: {
         Row: {
-          allowed_categories: string[]
-          available_capacity_m3: number
-          capacity_m3: number
-          created_at: string
-          driver_id: string
           id: string
-          is_active: boolean
-          max_weight_kg: number
-          plate_number: string
-          updated_at: string
+          driver_id: string
           vehicle_type: string
+          make: string
+          model: string
+          year: number | null
+          plate_number: string
+          capacity_m3: number | null
+          max_weight_kg: number | null
+          is_active: boolean | null
+          documents_verified: boolean | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          allowed_categories?: string[]
-          available_capacity_m3?: number
-          capacity_m3?: number
-          created_at?: string
-          driver_id: string
           id?: string
-          is_active?: boolean
-          max_weight_kg?: number
+          driver_id: string
+          vehicle_type: string
+          make: string
+          model: string
+          year?: number | null
           plate_number: string
+          capacity_m3?: number | null
+          max_weight_kg?: number | null
+          is_active?: boolean | null
+          documents_verified?: boolean | null
+          created_at?: string
           updated_at?: string
-          vehicle_type?: string
         }
         Update: {
-          allowed_categories?: string[]
-          available_capacity_m3?: number
-          capacity_m3?: number
-          created_at?: string
-          driver_id?: string
           id?: string
-          is_active?: boolean
-          max_weight_kg?: number
-          plate_number?: string
-          updated_at?: string
+          driver_id?: string
           vehicle_type?: string
+          make?: string
+          model?: string
+          year?: number | null
+          plate_number?: string
+          capacity_m3?: number | null
+          max_weight_kg?: number | null
+          is_active?: boolean | null
+          documents_verified?: boolean | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -162,21 +271,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      find_matching_vehicles: {
-        Args: { p_categories: string[]; p_volume: number; p_weight: number }
-        Returns: {
-          allowed_categories: string[]
-          available_space: number
-          capacity_m3: number
-          driver_avatar: string
-          driver_id: string
-          driver_name: string
-          max_weight_kg: number
-          plate_number: string
-          vehicle_id: string
-          vehicle_type: string
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

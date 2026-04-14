@@ -35,7 +35,7 @@ const LandingPage = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-amber">
               <Truck className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold tracking-tight text-foreground">Antigravity</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">parcido</span>
           </Link>
           <div className="flex items-center gap-3">
             <LanguageToggle />
@@ -190,7 +190,7 @@ const LandingPage = () => {
               Ready to move?
             </h2>
             <p className="mx-auto mt-3 max-w-md text-primary-foreground/80">
-              Join thousands of customers and drivers on the Antigravity platform
+              Join thousands of customers and drivers on the parcido platform
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
@@ -209,7 +209,7 @@ const LandingPage = () => {
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Truck className="h-4 w-4" />
-            <span>© 2026 Antigravity. All rights reserved.</span>
+            <span>© 2026 parcido. All rights reserved.</span>
           </div>
           <LanguageToggle />
         </div>

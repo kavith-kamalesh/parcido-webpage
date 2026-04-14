@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Truck, Package, TrendingUp, CheckCircle2, XCircle,
-  MapPin, Clock, Star, BarChart3, Plus, X, LogOut, Loader2
+  MapPin, Clock, Star, BarChart3, Plus, X, LogOut, Loader2,
+  FileText, Upload, Calendar, User
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -17,7 +18,7 @@ import type { Tables } from '@/integrations/supabase/types';
 type Vehicle = Tables<'vehicles'>;
 type Booking = Tables<'bookings'>;
 
-type TabId = 'dashboard' | 'vehicles' | 'earnings';
+type TabId = 'dashboard' | 'vehicles' | 'earnings' | 'documents';
 
 const DriverDashboard = () => {
   const { t } = useTranslation();
@@ -39,9 +40,21 @@ const DriverDashboard = () => {
     plate_number: '',
     capacity_m3: '',
     max_weight_kg: '',
-    allowed_categories: ['general'] as string[],
   });
   const [savingVehicle, setSavingVehicle] = useState(false);
+
+  // Document upload state
+  const [documents, setDocuments] = useState({
+    cdl: { file: null as File | null, expiryDate: '', url: '' },
+    rc: { file: null as File | null, url: '' },
+    insurance: { file: null as File | null, expiryDate: '', url: '' },
+    pollution: { file: null as File | null, expiryDate: '', url: '' },
+    medical: { file: null as File | null, expiryDate: '', url: '' },
+    fitness: { file: null as File | null, expiryDate: '', url: '' },
+    profilePhoto: { file: null as File | null, url: '' },
+  });
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const [driverActivated, setDriverActivated] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -89,7 +102,7 @@ const DriverDashboard = () => {
     setActionLoading(bookingId);
     const { error } = await supabase
       .from('bookings')
-      .update({ status: 'pending', driver_id: null, vehicle_id: null })
+      .update({ status: 'pending', driver_id: null })
       .eq('id', bookingId);
 
     if (error) {
@@ -109,14 +122,12 @@ const DriverDashboard = () => {
     }
     setSavingVehicle(true);
     const capacity = parseFloat(vForm.capacity_m3);
-    const { error } = await supabase.from('vehicles').insert({
+    const { error } = await (supabase as any).from('vehicles').insert({
       driver_id: user.id,
       vehicle_type: vForm.vehicle_type,
       plate_number: vForm.plate_number,
       capacity_m3: capacity,
       max_weight_kg: parseFloat(vForm.max_weight_kg),
-      allowed_categories: vForm.allowed_categories,
-      available_capacity_m3: capacity,
     });
 
     setSavingVehicle(false);
@@ -125,7 +136,7 @@ const DriverDashboard = () => {
     } else {
       toast({ title: 'Vehicle added!' });
       setShowVehicleForm(false);
-      setVForm({ vehicle_type: 'truck', plate_number: '', capacity_m3: '', max_weight_kg: '', allowed_categories: ['general'] });
+      setVForm({ vehicle_type: 'truck', plate_number: '', capacity_m3: '', max_weight_kg: '' });
       fetchData();
     }
   };
@@ -138,14 +149,14 @@ const DriverDashboard = () => {
   const handleAvailabilityChange = async (vehicleId: string, value: number) => {
     // Optimistic update
     setVehicles((prev) =>
-      prev.map((v) => (v.id === vehicleId ? { ...v, available_capacity_m3: value } : v))
+      prev.map((v) => (v.id === vehicleId ? { ...v, capacity_m3: value } : v))
     );
   };
 
   const commitAvailability = async (vehicleId: string, value: number) => {
     const { error } = await supabase
       .from('vehicles')
-      .update({ available_capacity_m3: value })
+      .update({ capacity_m3: value })
       .eq('id', vehicleId);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -159,7 +170,111 @@ const DriverDashboard = () => {
   const usedCapacity = activeBookings.reduce((s, b) => s + Number(b.total_volume_m3), 0);
   const usedPercent = totalCapacity > 0 ? (usedCapacity / totalCapacity) * 100 : 0;
 
-  const categoryOptions = ['general', 'fragile', 'medical', 'restricted'];
+  
+
+  const handleDocumentUpload = async (docType: keyof typeof documents, file: File, expiryDate?: string) => {
+    if (!user) return;
+    setUploadingDoc(docType);
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${docType}.${fileExt}`;
+    const filePath = `driver-documents/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast({ title: 'Upload failed', description: uploadError.message, variant: 'destructive' });
+      setUploadingDoc(null);
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath);
+
+    setDocuments(prev => ({
+      ...prev,
+      [docType]: {
+        ...prev[docType],
+        file: null,
+        url: data.publicUrl,
+        ...(expiryDate && { expiryDate })
+      }
+    }));
+
+    // Save to database
+    const docData: any = {
+      driver_id: user.id,
+      document_type: docType,
+      file_url: data.publicUrl,
+    };
+
+    if (expiryDate) {
+      docData.expiry_date = expiryDate;
+    }
+
+    const { error: dbError } = await supabase
+      .from('driver_documents')
+      .upsert(docData, { onConflict: 'driver_id,document_type' });
+
+    if (dbError) {
+      toast({ title: 'Database error', description: dbError.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Document uploaded!', description: `${docType} uploaded successfully.` });
+      checkActivationStatus();
+    }
+
+    setUploadingDoc(null);
+  };
+
+  const checkActivationStatus = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('driver_documents')
+      .select('document_type')
+      .eq('driver_id', user.id);
+
+    if (error) return;
+
+    const uploadedDocs = data.map(d => d.document_type);
+    const requiredDocs = ['cdl', 'rc', 'insurance', 'pollution', 'medical', 'fitness', 'profilePhoto'];
+    const allUploaded = requiredDocs.every(doc => uploadedDocs.includes(doc));
+
+    setDriverActivated(allUploaded);
+
+    // Update driver status in profiles table
+    await supabase
+      .from('profiles')
+      .update({ is_activated: allUploaded })
+      .eq('user_id', user.id);
+  };
+
+  useEffect(() => {
+    if (user) {
+      checkActivationStatus();
+      // Load existing documents
+      supabase
+        .from('driver_documents')
+        .select('*')
+        .eq('driver_id', user.id)
+        .then(({ data }) => {
+          if (data) {
+            const loadedDocs = { ...documents };
+            data.forEach(doc => {
+              loadedDocs[doc.document_type as keyof typeof documents] = {
+                ...loadedDocs[doc.document_type as keyof typeof documents],
+                url: doc.file_url,
+                expiryDate: doc.expiry_date || ''
+              };
+            });
+            setDocuments(loadedDocs);
+          }
+        });
+    }
+  }, [user]);
 
   if (authLoading || loadingData) {
     return (
@@ -176,10 +291,13 @@ const DriverDashboard = () => {
         <div className="container flex h-14 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-foreground">
             <Truck className="h-5 w-5" />
-            <span className="font-bold">Antigravity</span>
+            <span className="font-bold">parcido</span>
           </Link>
           <div className="flex items-center gap-3">
             <LanguageToggle />
+            <Link to="/profile" className="text-muted-foreground hover:text-foreground">
+              <User className="h-5 w-5" />
+            </Link>
             <button onClick={() => { signOut(); navigate('/'); }} className="text-muted-foreground hover:text-foreground">
               <LogOut className="h-5 w-5" />
             </button>
@@ -245,15 +363,13 @@ const DriverDashboard = () => {
                         <div className="mb-3 flex items-start justify-between">
                           <div>
                             <div className="text-xs text-muted-foreground">
-                              {(req.items as any[])?.length || 0} items • {Number(req.total_volume_m3).toFixed(2)} m³ • {Number(req.total_weight_kg).toFixed(0)} kg
+                              {Number(req.total_volume_m3).toFixed(2)} m³ • {Number(req.total_weight_kg).toFixed(0)} kg
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-1">
-                            {req.categories?.map((cat) => (
-                              <span key={cat} className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                {cat}
-                              </span>
-                            ))}
+                            <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                              General Cargo
+                            </span>
                           </div>
                         </div>
 
@@ -270,7 +386,7 @@ const DriverDashboard = () => {
 
                         <div className="flex items-center justify-between">
                           <div className="text-lg font-bold text-card-foreground">
-                            {req.price ? `₹${Number(req.price).toLocaleString()}` : 'Quote pending'}
+                            {(req as any).estimated_price ? `₹${Number((req as any).estimated_price).toLocaleString()}` : 'Quote pending'}
                           </div>
                           <div className="flex gap-2">
                             <button
@@ -316,10 +432,10 @@ const DriverDashboard = () => {
                           </span>
                         </div>
                         {/* Customer's before-shipping photo */}
-                        {b.customer_photo_url && (
+                        {(b as any).customer_photo_url && (
                           <div className="mt-3 border-t border-border pt-3">
                             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Customer's Before Photo</label>
-                            <img src={b.customer_photo_url} alt="Before shipping" className="h-24 w-24 rounded-lg border border-border object-cover" />
+                            <img src={(b as any).customer_photo_url} alt="Before shipping" className="h-24 w-24 rounded-lg border border-border object-cover" />
                           </div>
                         )}
                         {/* Driver's after-delivery photo upload */}
@@ -328,7 +444,7 @@ const DriverDashboard = () => {
                             <ShipmentPhotoUpload
                               bookingId={b.id}
                               userId={user.id}
-                              existingUrl={b.driver_photo_url}
+                              existingUrl={(b as any).driver_photo_url}
                               type="driver"
                               onUploaded={() => fetchData()}
                             />
@@ -403,29 +519,7 @@ const DriverDashboard = () => {
                           className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                       </div>
-                      <div>
-                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Allowed Categories</label>
-                        <div className="flex flex-wrap gap-2">
-                          {categoryOptions.map((cat) => (
-                            <button
-                              key={cat}
-                              onClick={() => {
-                                const cats = vForm.allowed_categories.includes(cat)
-                                  ? vForm.allowed_categories.filter((c) => c !== cat)
-                                  : [...vForm.allowed_categories, cat];
-                                setVForm({ ...vForm, allowed_categories: cats.length ? cats : ['general'] });
-                              }}
-                              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                                vForm.allowed_categories.includes(cat)
-                                  ? 'border-primary bg-primary/10 text-primary'
-                                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
-                              }`}
-                            >
-                              {cat}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+
                       <button
                         onClick={handleAddVehicle}
                         disabled={savingVehicle}
@@ -458,9 +552,7 @@ const DriverDashboard = () => {
                             {Number(v.capacity_m3)} m³ capacity • {Number(v.max_weight_kg)} kg max
                           </div>
                           <div className="mt-1 flex flex-wrap gap-1">
-                            {v.allowed_categories.map((cat) => (
-                              <span key={cat} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{cat}</span>
-                            ))}
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">General</span>
                           </div>
                         </div>
                         <button
@@ -477,15 +569,15 @@ const DriverDashboard = () => {
                       {/* Availability slider */}
                       <div className="mt-3 border-t border-border pt-3">
                         <div className="mb-1.5 flex items-center justify-between">
-                          <label className="text-xs font-medium text-muted-foreground">Available for booking</label>
+                          <label className="text-xs font-medium text-muted-foreground">Available capacity</label>
                           <span className="text-xs font-semibold text-foreground">
-                            {Number(v.available_capacity_m3).toFixed(1)} / {Number(v.capacity_m3).toFixed(1)} m³
+                            {Number(v.capacity_m3).toFixed(1)} m³
                           </span>
                         </div>
                         <Slider
-                          value={[Number(v.available_capacity_m3)]}
+                          value={[Number(v.capacity_m3)]}
                           min={0}
-                          max={Number(v.capacity_m3)}
+                          max={Number(v.capacity_m3) * 2}
                           step={0.1}
                           onValueChange={([val]) => handleAvailabilityChange(v.id, val)}
                           onValueCommit={([val]) => commitAvailability(v.id, val)}
@@ -496,6 +588,219 @@ const DriverDashboard = () => {
                   ))}
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {/* ===== DOCUMENTS TAB ===== */}
+          {activeTab === 'documents' && (
+            <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-foreground">Document Verification</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Upload all required documents to activate your driver account
+                </p>
+              </div>
+
+              {/* Activation Status */}
+              <div className={`mb-6 rounded-xl border p-4 ${
+                driverActivated
+                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+                  : 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950'
+              }`}>
+                <div className="flex items-center gap-3">
+                  {driverActivated ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-amber-600" />
+                  )}
+                  <div>
+                    <h3 className={`font-semibold ${
+                      driverActivated ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'
+                    }`}>
+                      {driverActivated ? 'Account Activated' : 'Account Pending Activation'}
+                    </h3>
+                    <p className={`text-sm ${
+                      driverActivated ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'
+                    }`}>
+                      {driverActivated
+                        ? 'All documents uploaded. You can now receive booking requests.'
+                        : 'Upload all required documents to start receiving bookings.'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Document Upload Grid */}
+              <div className="grid gap-4">
+                {[
+                  {
+                    key: 'cdl' as const,
+                    title: 'Commercial Driving License (CDL)',
+                    description: 'Valid commercial driving license',
+                    hasExpiry: true,
+                    required: true
+                  },
+                  {
+                    key: 'rc' as const,
+                    title: 'Registration Certificate (RC)',
+                    description: 'Vehicle registration certificate',
+                    hasExpiry: false,
+                    required: true
+                  },
+                  {
+                    key: 'insurance' as const,
+                    title: 'Motor Insurance',
+                    description: 'Valid vehicle insurance policy',
+                    hasExpiry: true,
+                    required: true
+                  },
+                  {
+                    key: 'pollution' as const,
+                    title: 'Pollution Under Control Certificate',
+                    description: 'Emission/PUC certificate',
+                    hasExpiry: true,
+                    required: true
+                  },
+                  {
+                    key: 'medical' as const,
+                    title: 'Medical Certificate',
+                    description: 'Medical fitness certificate',
+                    hasExpiry: true,
+                    required: true
+                  },
+                  {
+                    key: 'fitness' as const,
+                    title: 'Fitness Certificate (FC)',
+                    description: 'Vehicle fitness certificate',
+                    hasExpiry: true,
+                    required: true
+                  },
+                  {
+                    key: 'profilePhoto' as const,
+                    title: 'Profile Photo',
+                    description: 'Driver selfie for verification',
+                    hasExpiry: false,
+                    required: true
+                  },
+                ].map(({ key, title, description, hasExpiry, required }) => (
+                  <div key={key} className="rounded-xl border border-border bg-card p-4 shadow-card">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-card-foreground flex items-center gap-2">
+                          {title}
+                          {required && <span className="text-red-500">*</span>}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{description}</p>
+                      </div>
+                      {documents[key].url && (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      )}
+                    </div>
+
+                    {documents[key].url ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={documents[key].url}
+                            alt={title}
+                            className="h-16 w-16 rounded-lg border border-border object-cover"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm text-muted-foreground">Document uploaded</p>
+                            {hasExpiry && (documents[key] as any).expiryDate && (
+                              <p className="text-xs text-muted-foreground">
+                                Expires: {new Date((documents[key] as any).expiryDate).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <label className="flex-1">
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (hasExpiry) {
+                                    // For documents with expiry, we'll need to show a date input
+                                    setDocuments(prev => ({
+                                      ...prev,
+                                      [key]: { ...prev[key], file }
+                                    }));
+                                  } else {
+                                    handleDocumentUpload(key, file);
+                                  }
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-background py-2 px-4 text-sm text-muted-foreground hover:bg-muted cursor-pointer">
+                              <Upload className="h-4 w-4" />
+                              Update Document
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {hasExpiry && (
+                          <div>
+                            <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
+                              Expiry Date
+                            </label>
+                            <input
+                              type="date"
+                              value={(documents[key] as any).expiryDate}
+                              onChange={(e) => setDocuments(prev => ({
+                                ...prev,
+                                [key]: { ...prev[key], expiryDate: e.target.value }
+                              }))}
+                              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            />
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <label className="flex-1">
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (hasExpiry && !(documents[key] as any).expiryDate) {
+                                    toast({
+                                      title: 'Expiry date required',
+                                      description: 'Please set the expiry date before uploading.',
+                                      variant: 'destructive'
+                                    });
+                                    return;
+                                  }
+                                  handleDocumentUpload(key, file, hasExpiry ? (documents[key] as any).expiryDate : undefined);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            <div className={`flex items-center justify-center gap-2 rounded-lg border py-3 px-4 text-sm font-medium cursor-pointer transition-all ${
+                              uploadingDoc === key
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                            }`}>
+                              {uploadingDoc === key ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Upload className="h-4 w-4" />
+                              )}
+                              {uploadingDoc === key ? 'Uploading...' : 'Upload Document'}
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </motion.div>
           )}
 
@@ -530,6 +835,7 @@ const DriverDashboard = () => {
           {([
             { id: 'dashboard' as TabId, icon: Package, label: t('nav.dashboard') },
             { id: 'vehicles' as TabId, icon: Truck, label: t('nav.vehicles') },
+            { id: 'documents' as TabId, icon: FileText, label: 'Documents' },
             { id: 'earnings' as TabId, icon: TrendingUp, label: t('nav.earnings') },
           ]).map(({ id, icon: Icon, label }) => (
             <button

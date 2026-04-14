@@ -4,7 +4,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Truck, User, Package } from 'lucide-react';
 import { LanguageToggle } from '@/components/LanguageToggle';
-import { lovable } from '@/integrations/lovable';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth, getUserRole, updateUserRole } from '@/hooks/useAuth';
 
 const RegisterPage = () => {
@@ -32,13 +32,15 @@ const RegisterPage = () => {
     setLoading(true);
     setError('');
     try {
-      const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: window.location.origin + '/register?role=' + role,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/register?role=' + role,
+        },
       });
-      if (result.error) {
-        setError(result.error.message || 'Sign up failed');
+      if (error) {
+        setError(error.message || 'Sign up failed');
       }
-      if (result.redirected) return;
     } catch (e) {
       setError('Something went wrong');
     } finally {
@@ -53,7 +55,7 @@ const RegisterPage = () => {
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary-foreground/20">
             <Truck className="h-10 w-10 text-primary-foreground" />
           </div>
-          <h2 className="text-3xl font-bold text-primary-foreground">Antigravity</h2>
+          <h2 className="text-3xl font-bold text-primary-foreground">parcido</h2>
           <p className="mt-2 text-primary-foreground/70">{t('app.tagline')}</p>
         </motion.div>
       </div>
@@ -62,7 +64,7 @@ const RegisterPage = () => {
         <div className="flex items-center justify-between p-6">
           <Link to="/" className="flex items-center gap-2 text-foreground">
             <Truck className="h-5 w-5" />
-            <span className="font-bold">Antigravity</span>
+            <span className="font-bold">parcido</span>
           </Link>
           <LanguageToggle />
         </div>

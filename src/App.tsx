@@ -1,3 +1,5 @@
+
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,6 +10,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import BookingPage from "./pages/BookingPage";
 import DriverDashboard from "./pages/DriverDashboard";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +27,7 @@ const App = () => (
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/driver" element={<DriverDashboard />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
@@ -32,3 +36,4 @@ const App = () => (
 );
 
 export default App;
+
